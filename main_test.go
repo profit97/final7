@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCafeNegative(t *testing.T) {
@@ -32,25 +33,24 @@ func TestCafeNegative(t *testing.T) {
 	}
 }
 
-/*
-	func TestCafeWhenOk(t *testing.T) {
-		handler := http.HandlerFunc(mainHandle)
+func TestCafeWhenOk(t *testing.T) {
+	handler := http.HandlerFunc(mainHandle)
 
-		requests := []string{
-			"/cafe?count=2&city=moscow",
-			"/cafe?city=tula",
-			"/cafe?city=moscow&search=ложка",
-		}
-		for _, v := range requests {
-			response := httptest.NewRecorder()
-			req := httptest.NewRequest("GET", v, nil)
-
-			handler.ServeHTTP(response, req)
-
-			assert.Equal(t, http.StatusOK, response.Code)
-		}
+	requests := []string{
+		"/cafe?count=2&city=moscow",
+		"/cafe?city=tula",
+		"/cafe?city=moscow&search=ложка",
 	}
-*/
+	for _, v := range requests {
+		response := httptest.NewRecorder()
+		req := httptest.NewRequest("GET", v, nil)
+
+		handler.ServeHTTP(response, req)
+
+		assert.Equal(t, http.StatusOK, response.Code)
+	}
+}
+
 func SendRequest(city string, count int) (*http.Response, error) {
 	client := &http.Client{}
 	// Формируем URL с параметрами запроса
@@ -80,13 +80,13 @@ func TestCafeCount(t *testing.T) {
 
 	for _, req := range requests {
 
-		//response, err := SendRequest("moscow", req.count)
-		//if err != nil {
-		//t.Errorf("Ошибка при отправке запроса: %v", err)
-		//continue
-		//}
+		response, err := SendRequest("moscow", req.count)
+		if err != nil {
+			t.Errorf("Ошибка при отправке запроса: %v", err)
+			continue
+		}
 
-		//require.Equal(t, http.StatusOK, response.StatusCode)
+		require.Equal(t, http.StatusOK, response.StatusCode)
 
 		cafes := cafeList["moscow"]
 		if req.count < len(cafes) {
@@ -135,8 +135,8 @@ func TestCafeSearch(t *testing.T) {
 		// Подсчитываем количество полученных кафе.
 		gotCount := len(filteredCafes)
 
-		//_, err := SendRequest("moscow", 0)
-		//require.NoError(t, err, "Ошибка при отправке запроса")
+		_, err := SendRequest("moscow", 0)
+		require.NoError(t, err, "Ошибка при отправке запроса")
 
 		assert.Equal(t, req.wantCount, gotCount, "При search='%s' ожидалось %d кафе, но получено %d", req.search, req.wantCount, gotCount)
 	}
