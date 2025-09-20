@@ -1,12 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCafeNegative(t *testing.T) {
@@ -48,6 +50,21 @@ func TestCafeWhenOk(t *testing.T) {
 		assert.Equal(t, http.StatusOK, response.Code)
 	}
 }
+func SendRequest(city string, count int) (*http.Response, error) {
+	client := &http.Client{}
+	// Формируем URL с параметрами запроса
+	url := fmt.Sprintf("http://localhost:8080/cafe?city=%s&count=%d", city, count)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	return response, nil
+}
 
 func TestCafeCount(t *testing.T) {
 	requests := []struct {
@@ -61,23 +78,28 @@ func TestCafeCount(t *testing.T) {
 	}
 
 	for _, req := range requests {
-		// Получаем список кафе для заданного города и count
+
+		response, err := SendRequest("moscow", req.count)
+		if err != nil {
+			t.Errorf("Ошибка при отправке запроса: %v", err)
+			continue
+		}
+
+		require.Equal(t, http.StatusOK, response.StatusCode)
+
 		cafes := cafeList["moscow"]
 		if req.count < len(cafes) {
 			cafes = cafes[:req.count]
 		}
 
-		// Подсчитываем количество полученных кафе.
 		got := len(cafes)
 
-		if req.want == -1 { // для count=100 вычисляем ожидаемое количество
+		if req.want == -1 {
+			// для count=100 вычисляем ожидаемое количество
 			req.want = min(len(cafes), 100)
 		}
 
-		// Сравниваем полученное количество с ожидаемым.
-		if got != req.want {
-			t.Errorf("При count=%d ожидалось %d кафе, но получено %d", req.count, req.want, got)
-		}
+		assert.Equal(t, req.want, got, "При count=%d ожидалось %d кафе, но получено %d", req.count, req.want, got)
 	}
 }
 
@@ -90,18 +112,18 @@ func min(a, b int) int {
 
 func TestCafeSearch(t *testing.T) {
 	requests := []struct {
-		search    string // передаваемое значение search
-		wantCount int    // ожидаемое количество кафе в ответе
+		search    string
+		wantCount int
 	}{
 		{"фасоль", 0},
 		{"кофе", 2},
 		{"вилка", 1},
 	}
+
 	for _, req := range requests {
-		// Получаем список всех кафе в Москве.
+
 		cafes := cafeList["moscow"]
 
-		// Фильтруем список кафе, оставляя только те, в названии которых есть искомая строка.
 		filteredCafes := make([]string, 0)
 		for _, cafe := range cafes {
 			if strings.Contains(strings.ToLower(cafe), strings.ToLower(req.search)) {
@@ -112,9 +134,9 @@ func TestCafeSearch(t *testing.T) {
 		// Подсчитываем количество полученных кафе.
 		gotCount := len(filteredCafes)
 
-		// Сравниваем полученное количество с ожидаемым.
-		if gotCount != req.wantCount {
-			t.Errorf("При search='%s' ожидалось %d кафе, но получено %d", req.search, req.wantCount, gotCount)
-		}
+		_, err := SendRequest("moscow", 0)
+		require.NoError(t, err, "Ошибка при отправке запроса")
+
+		assert.Equal(t, req.wantCount, gotCount, "При search='%s' ожидалось %d кафе, но получено %d", req.search, req.wantCount, gotCount)
 	}
 }
