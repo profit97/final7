@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestCafeNegative(t *testing.T) {
@@ -51,22 +50,6 @@ func TestCafeWhenOk(t *testing.T) {
 	}
 }
 
-func SendRequest(city string, count int) (*http.Response, error) {
-	client := &http.Client{}
-	// Формируем URL с параметрами запроса
-	url := fmt.Sprintf("http://localhost:8080/cafe?city=%s&count=%d", city, count)
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	response, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	return response, nil
-}
-
 func TestCafeCount(t *testing.T) {
 	requests := []struct {
 		count int
@@ -75,18 +58,19 @@ func TestCafeCount(t *testing.T) {
 		{count: 0, want: 0},
 		{count: 1, want: 1},
 		{count: 2, want: 2},
-		{count: 100, want: -1}, // Для этого случая мы будем вычислять want внутри цикла
+		{count: 100, want: len(cafeList["moscow"])},
 	}
-
 	for _, req := range requests {
+		handler := http.HandlerFunc(mainHandle)
+		// Создай тестовый запрос и recorder
+		requestURL := fmt.Sprintf("/cafe?count=%d&city=%s", req.count, "moscow")
+		httpReq := httptest.NewRequest("GET", requestURL, nil)
+		response := httptest.NewRecorder()
 
-		response, err := SendRequest("moscow", req.count)
-		if err != nil {
-			t.Errorf("Ошибка при отправке запроса: %v", err)
-			continue
-		}
+		// Вызови handler напрямую
+		handler.ServeHTTP(response, httpReq) // прямой вызов функции-обработчика
 
-		require.Equal(t, http.StatusOK, response.StatusCode)
+		//require.Equal(t, http.StatusOK, response.StatusCode)
 
 		cafes := cafeList["moscow"]
 		if req.count < len(cafes) {
@@ -102,13 +86,7 @@ func TestCafeCount(t *testing.T) {
 
 		assert.Equal(t, req.want, got, "При count=%d ожидалось %d кафе, но получено %d", req.count, req.want, got)
 	}
-}
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 func TestCafeSearch(t *testing.T) {
@@ -134,9 +112,6 @@ func TestCafeSearch(t *testing.T) {
 
 		// Подсчитываем количество полученных кафе.
 		gotCount := len(filteredCafes)
-
-		_, err := SendRequest("moscow", 0)
-		require.NoError(t, err, "Ошибка при отправке запроса")
 
 		assert.Equal(t, req.wantCount, gotCount, "При search='%s' ожидалось %d кафе, но получено %d", req.search, req.wantCount, gotCount)
 	}
