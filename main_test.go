@@ -58,21 +58,19 @@ func TestCafeCount(t *testing.T) {
 		{count: 0, want: 0},
 		{count: 1, want: 1},
 		{count: 2, want: 2},
-		{count: 100, want: len(cafeList["tula"])},
+		{count: 100, want: len(cafeList["город"])},
 	}
 	for _, req := range requests {
 		handler := http.HandlerFunc(mainHandle)
 		// Создай тестовый запрос и recorder
-		requestURL := fmt.Sprintf("/cafe?count=%d&city=%s", req.count, "tula")
+		requestURL := fmt.Sprintf("/cafe?count=%d&city=%s", req.count, "город")
 		httpReq := httptest.NewRequest("GET", requestURL, nil)
 		response := httptest.NewRecorder()
 
 		// Вызови handler напрямую
 		handler.ServeHTTP(response, httpReq) // прямой вызов функции-обработчика
 
-		//require.Equal(t, http.StatusOK, response.StatusCode)
-
-		cafes := cafeList["moscow"]
+		cafes := cafeList["город"]
 		if req.count < len(cafes) {
 			cafes = cafes[:req.count]
 		}
