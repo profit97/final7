@@ -58,19 +58,19 @@ func TestCafeCount(t *testing.T) {
 		{count: 0, want: 0},
 		{count: 1, want: 1},
 		{count: 2, want: 2},
-		{count: 100, want: len(cafeList["город"])},
+		{count: 100, want: len(cafeList["moscow"])},
 	}
 	for _, req := range requests {
 		handler := http.HandlerFunc(mainHandle)
 		// Создай тестовый запрос и recorder
-		requestURL := fmt.Sprintf("/cafe?count=%d&city=%s", req.count, "город")
+		requestURL := fmt.Sprintf("/cafe?count=%d&city=%s", req.count, "moscow")
 		httpReq := httptest.NewRequest("GET", requestURL, nil)
 		response := httptest.NewRecorder()
 
 		// Вызови handler напрямую
 		handler.ServeHTTP(response, httpReq) // прямой вызов функции-обработчика
 
-		cafes := cafeList["город"]
+		cafes := cafeList["moscow"]
 		if req.count < len(cafes) {
 			cafes = cafes[:req.count]
 		}
@@ -84,7 +84,39 @@ func TestCafeCount(t *testing.T) {
 
 		assert.Equal(t, req.want, got, "При count=%d ожидалось %d кафе, но получено %d", req.count, req.want, got)
 	}
+	requests = []struct {
+		count int
+		want  int
+	}{
+		{count: 0, want: 0},
+		{count: 1, want: 1},
+		{count: 2, want: 2},
+		{count: 100, want: len(cafeList["tula"])},
+	}
+	for _, req := range requests {
+		handler := http.HandlerFunc(mainHandle)
+		// Создай тестовый запрос и recorder
+		requestURL := fmt.Sprintf("/cafe?count=%d&city=%s", req.count, "tula")
+		httpReq := httptest.NewRequest("GET", requestURL, nil)
+		response := httptest.NewRecorder()
 
+		// Вызови handler напрямую
+		handler.ServeHTTP(response, httpReq) // прямой вызов функции-обработчика
+
+		cafes := cafeList["tula"]
+		if req.count < len(cafes) {
+			cafes = cafes[:req.count]
+		}
+
+		got := len(cafes)
+
+		if req.count == 100 {
+			// для count=100 вычисляем ожидаемое количество
+			req.want = min(len(cafes), 100)
+		}
+
+		assert.Equal(t, req.want, got, "При count=%d ожидалось %d кафе, но получено %d", req.count, req.want, got)
+	}
 }
 
 func TestCafeSearch(t *testing.T) {
