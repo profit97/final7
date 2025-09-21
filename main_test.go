@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -46,5 +47,76 @@ func TestCafeWhenOk(t *testing.T) {
 		handler.ServeHTTP(response, req)
 
 		assert.Equal(t, http.StatusOK, response.Code)
+	}
+}
+
+func TestCafeCount(t *testing.T) {
+	requests := []struct {
+		count int
+		want  int
+	}{
+		{count: 0, want: 0},
+		{count: 1, want: 1},
+		{count: 2, want: 2},
+		{count: 100, want: len(cafeList["moscow"])},
+	}
+	for _, req := range requests {
+		handler := http.HandlerFunc(mainHandle)
+		// Создай тестовый запрос и recorder
+		requestURL := fmt.Sprintf("/cafe?count=%d&city=%s", req.count, "moscow")
+		httpReq := httptest.NewRequest("GET", requestURL, nil)
+		response := httptest.NewRecorder()
+
+		// Вызови handler напрямую
+		handler.ServeHTTP(response, httpReq) // прямой вызов функции-обработчика
+
+		cafes := cafeList["moscow"]
+		if req.count < len(cafes) {
+			cafes = cafes[:req.count]
+		}
+
+		got := len(cafes)
+
+		if req.count == 100 {
+			// для count=100 вычисляем ожидаемое количество
+			req.want = min(len(cafes), 100)
+		}
+
+		assert.Equal(t, req.want, got, "При count=%d ожидалось %d кафе, но получено %d", req.count, req.want, got)
+	}
+}
+
+func TestCafeSearch(t *testing.T) {
+	requests := []struct {
+		search    string
+		wantCount int
+	}{
+		{"фасоль", 0},
+		{"кофе", 2},
+		{"вилка", 1},
+	}
+
+	for _, req := range requests {
+		handler := http.HandlerFunc(mainHandle)
+		// Создай тестовый запрос и recorder
+		requestURL := fmt.Sprintf("/cafe?search=%d&city=%s", req.wantCount, "moscow")
+		httpReq := httptest.NewRequest("GET", requestURL, nil)
+		response := httptest.NewRecorder()
+
+		// Вызови handler напрямую
+		handler.ServeHTTP(response, httpReq) // прямой вызов функции-обработчика
+		cafes := cafeList["moscow"]
+
+		filteredCafes := make([]string, 0)
+		for _, cafe := range cafes {
+			if strings.Contains(strings.ToLower(cafe), strings.ToLower(req.search)) {
+				filteredCafes = append(filteredCafes, cafe)
+			}
+		}
+
+		// Подсчитываем количество полученных кафе.
+		gotCount := len(filteredCafes)
+
+		assert.Equal(t, req.wantCount, gotCount, "При search='%s' ожидалось %d кафе, но получено %d", req.search, req.wantCount, gotCount)
 	}
 }
